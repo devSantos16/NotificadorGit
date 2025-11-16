@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NotificadorGit.Model
 {
-    internal class CommitModel
+    internal class CommitConflitado
     {
         public string Sha { get; set; }
         public string Mensagem { get; set; }

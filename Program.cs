@@ -1,50 +1,47 @@
 ﻿using LibGit2Sharp;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using NotificadorGit.Controller;
+using NotificadorGit.Interface;
 using NotificadorGit.Model;
+using NotificadorGit.Service;
 
 namespace NotificadorGit
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            // Repositório de Teste Local
-            string repoPath = @"C:\dev\repoTeste";
-
-            RepositoryController repoController = new RepositoryController(repoPath);
-            while (true)
-            {
-                Thread.Sleep(20000);
-                var commits = repoController.listarCommitsComConflito();
-                if (commits != null && commits.Count > 0)
+            var host = Host.CreateDefaultBuilder(args)
+                .ConfigureServices((ctx, services) => 
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("════════════════════════════════════════════════════════");
-                    Console.WriteLine($"⚠️  Possíveis conflitos encontrados: {commits.Count}");
-                    Console.WriteLine("════════════════════════════════════════════════════════");
-
-                    int i = 1;
-                    foreach (var c in commits)
+                    services.AddLogging();
+                    services.Configure<GitOptions>(opcoes => 
                     {
-                        PrintCommitInfo(c, i++);
-                    }
+                        opcoes.CaminhoRepositorio = @"C:\dev\repoTeste";
+                        opcoes.Branch = "main";
+                        opcoes.Remota = "origin";
+                    });
 
-                    Console.WriteLine("════════════════════════════════════════════════════════");
-                    Console.WriteLine();
-                }
-                else
-                {
-                    Console.WriteLine("Nenhum commit com conflito encontrado.");
-                }
+                    services.AddSingleton<IGitRepositoryService, GitRepositoryService>();
+                    services.AddTransient<Controller.RepositoryController>();
+                })
+                .Build();
+
+            using var scope = host.Services.CreateScope();
+            var controller = scope.ServiceProvider.GetRequiredService<Controller.RepositoryController>();
+
+            try
+            {
+                var commits = await controller.ListarCommitsComConflitoAsync();
+                Console.WriteLine($"Encontrados {commits.Count} commits com conflito.");
             }
-
-        }
-        private static void PrintCommitInfo(CommitModel commit, int index)
-        {
-            Console.WriteLine($"{index}) {commit.Sha} - {commit.Mensagem}");
-            Console.WriteLine($"   Autor : {commit.Autor} <{commit.Email}>");
-            Console.WriteLine($"   Data  : {commit.Data}");
-            Console.WriteLine();
+            catch (Exception ex)
+            {
+                var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+                logger.LogError(ex, "Erro na execução");
+            }
         }
     }
 }
