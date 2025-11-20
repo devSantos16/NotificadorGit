@@ -18,7 +18,7 @@ namespace NotificadorGit.Controller
             _logger = logger;
         }
 
-        public Task<List<CommitConflitado>> ListarCommitsComConflitoAsync(CancellationToken cancellationToken = default)
-            => _gitService.ListarCommitsComConflitoAsync(cancellationToken);
+        public Task<List<Branch>> ListarBranchesComConflito(CancellationToken cancellationToken = default)
+            => _gitService.ListarBranchesComConflitoAsync(cancellationToken);
     }
 }

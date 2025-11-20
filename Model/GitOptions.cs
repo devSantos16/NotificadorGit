@@ -9,7 +9,7 @@ namespace NotificadorGit.Model
     internal class GitOptions
     {
         public string CaminhoRepositorio { get; set; } = string.Empty;
-        public string Branch { get; set; } = "main";
-        public string Remota { get; set; } = "origin";
+        public string Branch { get; set; }
+        public string Remota { get; set; }
     }
 }

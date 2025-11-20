@@ -9,6 +9,6 @@ namespace NotificadorGit.Interface
 {
     internal interface IGitRepositoryService
     {
-        Task<List<CommitConflitado>> ListarCommitsComConflitoAsync(CancellationToken cancellationToken = default);
+        Task<List<Branch>> ListarBranchesComConflitoAsync(CancellationToken cancellationToken = default);
     }
 }

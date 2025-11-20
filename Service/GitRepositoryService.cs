@@ -22,81 +22,83 @@ namespace NotificadorGit.Service
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public Task<List<Model.CommitConflitado>> ListarCommitsComConflitoAsync(CancellationToken cancellationToken = default)
+        public Task<List<Model.Branch>> ListarBranchesComConflitoAsync(CancellationToken cancellationToken = default)
         {
             return Task.Run(() => ListarCommitsInternal(cancellationToken), cancellationToken);
         }
 
-        private List<Model.CommitConflitado> ListarCommitsInternal(CancellationToken cancellationToken)
+        private List<Model.Branch> ListarCommitsInternal(CancellationToken cancellationToken)
         {
             try
             {
                 _logger.LogInformation("Listando commits com conflito em {RepositoryPath} na branch {Branch} da remota {Remote}.", _options.CaminhoRepositorio, _options.Branch, _options.Remota);
+                
                 using var repo = new Repository(_options.CaminhoRepositorio);
+                var remote = repo.Network.Remotes[_options.Remota];
 
-                try
-                {
-                    Commands.Fetch(repo, _options.Remota, new[] { _options.Branch }, null, null);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Falha ao executar fetch em {Remote}/{Branch}. Continuando com refs locais.", _options.Remota, _options.Branch);
-                }
+                // Faz o Fetch pra poder analisar o repositorio remoto
+                Commands.Fetch(repo, remote.Name, remote.FetchRefSpecs.Select(rs => rs.Specification), null, null );
 
+                // Obtém todas as branches remotas
+                var remoteBranches = repo.Branches
+                    .Where(b => b.IsRemote && b.FriendlyName.StartsWith($"{_options.Remota}/"))
+                    .ToList();
+
+                // Obtém a branch principal remota
+                var mainBranch = repo.Branches[$"{_options.Remota}/{_options.Branch}"];
+
+                // Obtém as branches filhas da principal remota
+                var childBranches = remoteBranches
+                    .Where(b => b != mainBranch && repo.ObjectDatabase.CalculateHistoryDivergence(mainBranch.Tip, b.Tip)?.CommonAncestor != null)
+                    .ToList();
+
+                // Obtem a branch local
                 var localBranch = repo.Branches[_options.Branch];
-                var remoteBranch = repo.Branches[$"{_options.Remota}/{_options.Branch}"];
 
-                if (remoteBranch == null)
+                // Cria uma lista com a branch principal e as filhas para processar
+                var branchesParaProcessar = new List<LibGit2Sharp.Branch>();
+                
+                if (mainBranch != null)
                 {
-                    _logger.LogInformation("Branch remota não encontrada: {RemoteBranch}", $"{_options.Remota}/{_options.Branch}");
-                    return new List<Model.CommitConflitado>();
+                    // Adiciona a branch principal à lista de processamento
+                    branchesParaProcessar.Add(mainBranch);
                 }
 
-                var commitsRemoto = repo.Commits.QueryBy(new CommitFilter
-                {
-                    IncludeReachableFrom = remoteBranch,
-                    ExcludeReachableFrom = localBranch
-                });
+                // Adiciona as branches filhas à lista de processamento
+                branchesParaProcessar.AddRange(childBranches);
 
+                // pega todos os arquivo locais do repositorio
                 var arquivosLocais = repo.RetrieveStatus()
                     .Select(s => s.FilePath)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                var commitConflitado = new List<Model.CommitConflitado>();
+                // Cria uma lista de branches
+                var branches = new List<Model.Branch>();
 
-                foreach (var commit in commitsRemoto)
+                foreach (var remoteBranch in branchesParaProcessar)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var parent = commit.Parents.FirstOrDefault();
-                    
-                    if (parent == null)
+                    Model.Branch branch = new Model.Branch();
+
+                    var exclude = remoteBranch == mainBranch
+                        ? new[] { localBranch }
+                        : new[] { localBranch, mainBranch };
+
+                    ICommitLog commitsRemoto = repo.Commits.QueryBy(new CommitFilter
                     {
-                        continue;
-                    }
+                        IncludeReachableFrom = remoteBranch,
+                        ExcludeReachableFrom = exclude
+                    });
 
-                    var changes = repo.Diff.Compare<TreeChanges>(parent.Tree, commit.Tree);
+                    // instancia uma lista de commits
+                    var commits = obterCommits(repo, commitsRemoto, arquivosLocais, cancellationToken);
 
-                    foreach (var change in changes)
+                    if (commits.Any())
                     {
-                        if (!arquivosLocais.Contains(change.Path))
-                            continue;
-
-                        if (commitConflitado.Any(x => string.Equals(x.Arquivo, change.Path, StringComparison.OrdinalIgnoreCase)))
-                            continue;
-
-                        commitConflitado.Add(new Model.CommitConflitado
-                        {
-                            Sha = commit.Sha,
-                            Autor = commit.Author.Name,
-                            Email = commit.Author.Email,
-                            Mensagem = commit.Message,
-                            Data = commit.Author.When,
-                            Arquivo = change.Path
-                        });
+                        branches.Add(new Model.Branch { Commits = commits });
                     }
                 }
 
-                return commitConflitado;
+                return branches;
             }
             catch (OperationCanceledException)
             {
@@ -106,8 +108,62 @@ namespace NotificadorGit.Service
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao listar commits com conflito.");
-                return new List<Model.CommitConflitado>();
+                return new List<Model.Branch>();
             }
+        }
+
+        private static List<Model.Commit> obterCommits(Repository repo, ICommitLog commitsRemoto, HashSet<string> arquivosLocais, CancellationToken cancellationToken)
+        {
+            List<Model.Commit> commits = new List<Model.Commit>();
+
+            foreach (var commit in commitsRemoto)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var parent = commit.Parents.FirstOrDefault();
+
+                if (parent == null)
+                {
+                    continue;
+                }
+
+                var modificacoes = repo.Diff.Compare<TreeChanges>(parent.Tree, commit.Tree);
+                List<Conflito> conflitos = new List<Conflito>();
+
+                foreach (var modificacao in modificacoes)
+                {
+                    if (!arquivosLocais.Contains(modificacao.Path))
+                    {
+                        continue;
+                    }
+
+                    if (commits.Any(x => x.Conflitos.Any(c => string.Equals(c.Arquivo, modificacao.Path, StringComparison.OrdinalIgnoreCase))))
+                    {
+                        continue;
+                    }
+
+                    conflitos.Add(new Conflito
+                    {
+                        Arquivo = modificacao.Path
+                    });
+                }
+
+                if (conflitos.Count == 0)
+                {
+                    continue;
+                }
+
+                commits.Add(new Model.Commit
+                {
+                    Sha = commit.Sha,
+                    Autor = commit.Author.Name,
+                    Email = commit.Author.Email,
+                    Mensagem = commit.Message,
+                    Data = commit.Author.When,
+                    Conflitos = conflitos
+                });
+            }
+
+            return commits;
         }
     }
 }

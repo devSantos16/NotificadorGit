@@ -34,8 +34,7 @@ namespace NotificadorGit
 
             try
             {
-                var commits = await controller.ListarCommitsComConflitoAsync();
-                Console.WriteLine($"Encontrados {commits.Count} commits com conflito.");
+                var commits = await controller.ListarBranchesComConflito();
             }
             catch (Exception ex)
             {
