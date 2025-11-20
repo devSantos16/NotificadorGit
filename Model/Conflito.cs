@@ -9,5 +9,7 @@ namespace NotificadorGit.Model
     internal class Conflito
     {
         public string Arquivo { get; set; }
+        public string DiffLocal { get; internal set; }
+        public string DiffRemoto { get; internal set; }
     }
 }

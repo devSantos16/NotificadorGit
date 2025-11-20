@@ -120,47 +120,42 @@ namespace NotificadorGit.Service
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var parent = commit.Parents.FirstOrDefault();
-
-                if (parent == null)
-                {
-                    continue;
-                }
+                if (parent == null) continue;
 
                 var modificacoes = repo.Diff.Compare<TreeChanges>(parent.Tree, commit.Tree);
+                var patch = repo.Diff.Compare<Patch>(parent.Tree, commit.Tree);
                 List<Conflito> conflitos = new List<Conflito>();
-
+                
                 foreach (var modificacao in modificacoes)
                 {
-                    if (!arquivosLocais.Contains(modificacao.Path))
-                    {
-                        continue;
-                    }
+                    if (!arquivosLocais.Contains(modificacao.Path)) continue;
+                    if (commits.Any(x => x.Conflitos.Any(c => string.Equals(c.Arquivo, modificacao.Path, StringComparison.OrdinalIgnoreCase)))) continue;
 
-                    if (commits.Any(x => x.Conflitos.Any(c => string.Equals(c.Arquivo, modificacao.Path, StringComparison.OrdinalIgnoreCase))))
-                    {
-                        continue;
-                    }
+                    var entry = patch[modificacao.Path];
+                    var blob = commit[modificacao.Path]?.Target as Blob;
+                    string remoteContent = blob?.GetContentText();
+                    string localContent = File.ReadAllText(Path.Combine(repo.Info.WorkingDirectory, modificacao.Path));
 
                     conflitos.Add(new Conflito
                     {
-                        Arquivo = modificacao.Path
+                        Arquivo = modificacao.Path,
+                        DiffLocal = localContent,
+                        DiffRemoto = remoteContent
                     });
                 }
 
-                if (conflitos.Count == 0)
+                if (conflitos.Count != 0)
                 {
-                    continue;
+                    commits.Add(new Model.Commit
+                    {
+                        Sha = commit.Sha,
+                        Autor = commit.Author.Name,
+                        Email = commit.Author.Email,
+                        Mensagem = commit.Message,
+                        Data = commit.Author.When,
+                        Conflitos = conflitos
+                    });
                 }
-
-                commits.Add(new Model.Commit
-                {
-                    Sha = commit.Sha,
-                    Autor = commit.Author.Name,
-                    Email = commit.Author.Email,
-                    Mensagem = commit.Message,
-                    Data = commit.Author.When,
-                    Conflitos = conflitos
-                });
             }
 
             return commits;
