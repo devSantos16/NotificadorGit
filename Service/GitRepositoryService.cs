@@ -49,7 +49,8 @@ namespace NotificadorGit.Service
 
                 // Obtém as branches filhas da principal remota
                 var childBranches = remoteBranches
-                    .Where(b => b != mainBranch && repo.ObjectDatabase.CalculateHistoryDivergence(mainBranch.Tip, b.Tip)?.CommonAncestor != null)
+                    .Where(b => b != mainBranch && repo.ObjectDatabase
+                    .CalculateHistoryDivergence(mainBranch.Tip, b.Tip)?.CommonAncestor == mainBranch.Tip)
                     .ToList();
 
                 // Obtem a branch local
@@ -94,7 +95,11 @@ namespace NotificadorGit.Service
 
                     if (commits.Any())
                     {
-                        branches.Add(new Model.Branch { Commits = commits });
+                        branches.Add(new Model.Branch 
+                        { 
+                            Commits = commits,
+                            NomeBranch = remoteBranch.FriendlyName.Replace($"{_options.Remota}/", string.Empty)
+                        });
                     }
                 }
 
