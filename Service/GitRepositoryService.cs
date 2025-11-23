@@ -90,7 +90,7 @@ namespace NotificadorGit.Service
                     });
 
                     // instancia uma lista de commits
-                    var commits = obterCommits(repo, commitsRemoto, arquivosLocais, cancellationToken);
+                    var commits = obterCommits(repo, commitsRemoto, arquivosLocais, cancellationToken, localBranch);
 
                     if (commits.Any())
                     {
@@ -112,9 +112,14 @@ namespace NotificadorGit.Service
             }
         }
 
-        private static List<Model.Commit> obterCommits(Repository repo, ICommitLog commitsRemoto, HashSet<string> arquivosLocais, CancellationToken cancellationToken)
+        private static List<Model.Commit> obterCommits(Repository repo, ICommitLog commitsRemoto, HashSet<string> arquivosLocais, CancellationToken cancellationToken, LibGit2Sharp.Branch localBranch)
         {
             List<Model.Commit> commits = new List<Model.Commit>();
+
+            ICommitLog commitBranchLocal = repo.Commits.QueryBy(new CommitFilter
+            {
+                IncludeReachableFrom = localBranch
+            });
 
             foreach (var commit in commitsRemoto)
             {
@@ -124,7 +129,7 @@ namespace NotificadorGit.Service
 
                 var modificacoes = repo.Diff.Compare<TreeChanges>(parent.Tree, commit.Tree);
                 var patch = repo.Diff.Compare<Patch>(parent.Tree, commit.Tree);
-                List<Conflito> conflitos = new List<Conflito>();
+                List<PossivelConflito> conflitos = new List<PossivelConflito>();
                 
                 foreach (var modificacao in modificacoes)
                 {
@@ -133,14 +138,17 @@ namespace NotificadorGit.Service
 
                     var entry = patch[modificacao.Path];
                     var blob = commit[modificacao.Path]?.Target as Blob;
+                    var blobPartida = commitBranchLocal.FirstOrDefault()[modificacao.Path]?.Target as Blob;
+                    var localPartidaContent = blobPartida?.GetContentText();
                     string remoteContent = blob?.GetContentText();
                     string localContent = File.ReadAllText(Path.Combine(repo.Info.WorkingDirectory, modificacao.Path));
 
-                    conflitos.Add(new Conflito
+                    conflitos.Add(new PossivelConflito
                     {
                         Arquivo = modificacao.Path,
+                        DiffPartida = localPartidaContent,
                         DiffLocal = localContent,
-                        DiffRemoto = remoteContent
+                        DiffRemoto = remoteContent,
                     });
                 }
 
