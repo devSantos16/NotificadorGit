@@ -14,35 +14,61 @@ namespace NotificadorGit.Controller
         private readonly GeminiController _geminiController;
         private readonly ILogger<RepositoryController> _logger;
 
-        public RepositoryController(IGitRepositoryService gitService, GeminiController geminiController,  ILogger<RepositoryController> logger)
+        public RepositoryController(
+            IGitRepositoryService gitService,
+            GeminiController geminiController,
+            ILogger<RepositoryController> logger)
         {
             _gitService = gitService;
             _geminiController = geminiController;
             _logger = logger;
         }
 
-        public async Task<List<Branch>> ListarBranchesComConflito(CancellationToken cancellationToken = default)
+        public async Task<List<Branch>> ListarBranchesComConflito(
+            CancellationToken cancellationToken = default)
         {
-            Task<List<Branch>> branches =  _gitService.ListarBranchesComConflitoAsync(cancellationToken);
+            var branchesTask = _gitService.ListarBranchesComConflitoAsync(cancellationToken);
 
-            foreach (var branch in await branches)
+            var branches = await branchesTask;
+
+            foreach (var branch in branches)
             {
                 foreach (var commit in branch.Commits)
                 {
                     foreach (var conflito in commit.Conflitos)
                     {
-                        (bool, string) resposta = await _geminiController.GerarPromptAsync(
-                            $"Responda em JSON com os campos 'message' e 'isTrue'. Pergunta: " +
-                            $"Sabendo que o diff de partida é {conflito.DiffPartida}" +
-                            $"O Autor {commit.Autor} do commit {commit.Sha}: {commit.Mensagem} que possui o seguinte diff: {conflito.DiffRemoto}" +
-                            $"conflitou com as alterações da diff local {conflito.DiffLocal}?" +
-                            $"Se sim, Explique as diferenças entre e considere dá dicas pra resolver o conflito", cancellationToken);
+                        string pergunta =
+                            "Responda em JSON no formato { \"message\": string, \"isTrue\": bool }. " +
+                            "Avalie se há conflito entre os diffs abaixo.\n\n" +
+
+                            "[DIFF DE PARTIDA]\n" +
+                            $"{conflito.DiffPartida}\n\n" +
+
+                            "Informações do commit remoto:\n" +
+                            $"- Autor: {commit.Autor}\n" +
+                            $"- Hash: {commit.Sha}\n" +
+                            $"- Branch: {branch.NomeBranch}\n" +
+                            $"- Mensagem: {commit.Mensagem}\n" +
+                            
+                            "[DIFF REMOTO]\n" +
+                            $"{conflito.DiffRemoto}\n\n" +
+
+                            "[DIFF LOCAL]\n" +
+                            $"{conflito.DiffLocal}\n\n" +
+
+                            "Pergunta: O diff remoto conflita com o diff local em relação ao diff de partida?\n" +
+                            "Se 'isTrue' for true, explique detalhadamente em 'message' quais partes conflitam, " +
+                            "quais linhas sobrepõem alterações e dê dicas práticas para resolver o conflito.";
+
+                        (bool, string) resposta =
+                            await _geminiController.GerarPromptAsync(pergunta, cancellationToken);
+
                         conflito.HaConflitoComJustificativa = resposta;
                     }
                 }
             }
-            return await branches;
+
+            return branches;
         }
-            
     }
 }

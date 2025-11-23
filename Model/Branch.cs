@@ -9,5 +9,6 @@ namespace NotificadorGit.Model
     internal class Branch
     {
         public List<Commit> Commits { get; set; }
+        public string NomeBranch { get; set; }
     }
 }
