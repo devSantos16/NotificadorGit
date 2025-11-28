@@ -76,18 +76,16 @@ namespace NotificadorGit.Service
                 // Cria uma lista de branches
                 var branchesParaProcessar = new List<Model.Branch>();
 
-                foreach (var remoteBranch in branches)
+                foreach (var branch in branches)
                 {
-                    Model.Branch branch = new Model.Branch();
-
-                    var exclude = remoteBranch == branchPrincipal
+                    var filtroBranchParaExcluir = branch == branchPrincipal
                         ? new[] { branchLocal }
                         : new[] { branchLocal, branchPrincipal };
 
                     ICommitLog commitsRemoto = repo.Commits.QueryBy(new CommitFilter
                     {
-                        IncludeReachableFrom = remoteBranch,
-                        ExcludeReachableFrom = exclude
+                        IncludeReachableFrom = branch,
+                        ExcludeReachableFrom = filtroBranchParaExcluir
                     });
 
                     // instancia uma lista de commits
@@ -98,7 +96,7 @@ namespace NotificadorGit.Service
                         branchesParaProcessar.Add(new Model.Branch 
                         { 
                             Commits = commits,
-                            NomeBranch = remoteBranch.FriendlyName.Replace($"{_opcoes.Remota}/", string.Empty)
+                            NomeBranch = branch.FriendlyName.Replace($"{_opcoes.Remota}/", string.Empty)
                         });
                     }
                 }
