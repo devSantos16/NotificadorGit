@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace NotificadorGit.Model
 {
-    internal class Conflito
+    internal class Arquivo
     {
-        public string Arquivo { get; set; }
+        public string NomeArquivo { get; set; }
         public string DiffPartida { get; internal set; }
         public string DiffLocal { get; internal set; }
         public string DiffRemoto { get; internal set; }

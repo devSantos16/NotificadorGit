@@ -134,12 +134,12 @@ namespace NotificadorGit.Service
 
                 var modificacoes = repo.Diff.Compare<TreeChanges>(parent.Tree, commit.Tree);
                 var patch = repo.Diff.Compare<Patch>(parent.Tree, commit.Tree);
-                List<Conflito> conflitos = new List<Conflito>();
+                List<Arquivo> arquivos = new List<Arquivo>();
                 
                 foreach (var modificacao in modificacoes)
                 {
                     if (!arquivosLocais.Contains(modificacao.Path)) continue;
-                    if (commits.Any(x => x.Conflitos.Any(c => string.Equals(c.Arquivo, modificacao.Path, StringComparison.OrdinalIgnoreCase)))) continue;
+                    if (commits.Any(x => x.Conflitos.Any(c => string.Equals(c.NomeArquivo, modificacao.Path, StringComparison.OrdinalIgnoreCase)))) continue;
 
                     var entry = patch[modificacao.Path];
                     var blob = commit[modificacao.Path]?.Target as Blob;
@@ -148,16 +148,16 @@ namespace NotificadorGit.Service
                     string remoteContent = blob?.GetContentText();
                     string localContent = File.ReadAllText(Path.Combine(repo.Info.WorkingDirectory, modificacao.Path));
 
-                    conflitos.Add(new Conflito
+                    arquivos.Add(new Arquivo
                     {
-                        Arquivo = modificacao.Path,
+                        NomeArquivo = modificacao.Path,
                         DiffPartida = localPartidaContent,
                         DiffLocal = localContent,
                         DiffRemoto = remoteContent,
                     });
                 }
 
-                if (conflitos.Count != 0)
+                if (arquivos.Count != 0)
                 {
                     commits.Add(new Model.Commit
                     {
@@ -166,7 +166,7 @@ namespace NotificadorGit.Service
                         Email = commit.Author.Email,
                         Mensagem = commit.Message,
                         Data = commit.Author.When,
-                        Conflitos = conflitos
+                        Conflitos = arquivos
                     });
                 }
             }
