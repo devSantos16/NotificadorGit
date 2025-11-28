@@ -11,7 +11,7 @@ namespace NotificadorGit.Controller
     internal class GitRepositorioController
     {
         private readonly IGitRepositorioService _gitService;
-        private readonly IAController _geminiController;
+        private readonly IAController _IAController;
         private readonly ILogger<GitRepositorioController> _logger;
 
         public GitRepositorioController(
@@ -20,7 +20,7 @@ namespace NotificadorGit.Controller
             ILogger<GitRepositorioController> logger)
         {
             _gitService = gitService;
-            _geminiController = geminiController;
+            _IAController = geminiController;
             _logger = logger;
         }
 
@@ -59,7 +59,7 @@ namespace NotificadorGit.Controller
                             "quais linhas sobrepõem alterações e dê dicas práticas para resolver o conflito.";
 
                         (bool, string) resposta =
-                            await _geminiController.GerarPromptAsync(pergunta, cancellationToken);
+                            await _IAController.GerarPromptAsync(pergunta, cancellationToken);
 
                         arquivo.HaConflitoComJustificativa = resposta;
                     }
