@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NotificadorGit.Model
 {
-    internal class PossivelConflito
+    internal class Conflito
     {
         public string Arquivo { get; set; }
         public string DiffPartida { get; internal set; }

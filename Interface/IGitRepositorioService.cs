@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NotificadorGit.Interface
 {
-    internal interface IGitRepositoryService
+    internal interface IGitRepositorioService
     {
         Task<List<Branch>> ListarBranchesComConflitoAsync(CancellationToken cancellationToken = default);
     }

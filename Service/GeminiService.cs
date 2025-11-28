@@ -11,13 +11,13 @@ using System.Threading.Tasks;
 
 namespace NotificadorGit.Service
 {
-    internal class GeminiService : IGeminiService
+    internal class GeminiService : IIAService
     {
         private readonly HttpClient _httpClient;
-        private readonly GeminiOptions _options;
+        private readonly IAOpcoes _options;
         private readonly ILogger<GeminiService> _logger;
 
-        public GeminiService(HttpClient httpClient, IOptions<GeminiOptions> options, ILogger<GeminiService> logger)
+        public GeminiService(HttpClient httpClient, IOptions<IAOpcoes> options, ILogger<GeminiService> logger)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));

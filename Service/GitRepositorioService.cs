@@ -11,12 +11,12 @@ using System.Threading.Tasks;
 
 namespace NotificadorGit.Service
 {
-    internal class GitRepositoryService : IGitRepositoryService
+    internal class GitRepositorioService : IGitRepositorioService
     {
-        private readonly GitOptions _options;
-        private readonly ILogger<GitRepositoryService> _logger;
+        private readonly GitOpcoes _options;
+        private readonly ILogger<GitRepositorioService> _logger;
 
-        public GitRepositoryService(IOptions<GitOptions> options, ILogger<GitRepositoryService> logger)
+        public GitRepositorioService(IOptions<GitOpcoes> options, ILogger<GitRepositorioService> logger)
         {
             _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -134,7 +134,7 @@ namespace NotificadorGit.Service
 
                 var modificacoes = repo.Diff.Compare<TreeChanges>(parent.Tree, commit.Tree);
                 var patch = repo.Diff.Compare<Patch>(parent.Tree, commit.Tree);
-                List<PossivelConflito> conflitos = new List<PossivelConflito>();
+                List<Conflito> conflitos = new List<Conflito>();
                 
                 foreach (var modificacao in modificacoes)
                 {
@@ -148,7 +148,7 @@ namespace NotificadorGit.Service
                     string remoteContent = blob?.GetContentText();
                     string localContent = File.ReadAllText(Path.Combine(repo.Info.WorkingDirectory, modificacao.Path));
 
-                    conflitos.Add(new PossivelConflito
+                    conflitos.Add(new Conflito
                     {
                         Arquivo = modificacao.Path,
                         DiffPartida = localPartidaContent,

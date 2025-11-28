@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NotificadorGit.Model
 {
-    internal class GitOptions
+    internal class GitOpcoes
     {
         public string CaminhoRepositorio { get; set; } = string.Empty;
         public string Branch { get; set; }

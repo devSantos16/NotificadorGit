@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NotificadorGit.Interface
 {
-    internal interface IGeminiService
+    internal interface IIAService
     {
         public Task<(bool IsTrue, string message)> GerarPrompt(string prompt, CancellationToken cancellationToken = default);
     }

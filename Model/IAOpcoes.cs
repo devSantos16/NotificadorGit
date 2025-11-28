@@ -1,6 +1,6 @@
 namespace NotificadorGit.Model
 {
-    internal class GeminiOptions
+    internal class IAOpcoes
     {
         public string ApiKey { get; set; }
         public string Model { get; set; }

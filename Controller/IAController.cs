@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace NotificadorGit.Controller
 {
-    internal class GeminiController
+    internal class IAController
     {
-        private readonly IGeminiService _geminiService;
-        private readonly ILogger<GeminiController> _logger;
+        private readonly IIAService _geminiService;
+        private readonly ILogger<IAController> _logger;
 
-        public GeminiController(IGeminiService geminiService, ILogger<GeminiController> logger)
+        public IAController(IIAService geminiService, ILogger<IAController> logger)
         {
             _geminiService = geminiService ?? throw new ArgumentNullException(nameof(geminiService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

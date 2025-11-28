@@ -8,16 +8,16 @@ using System.Threading.Tasks;
 
 namespace NotificadorGit.Controller
 {
-    internal class RepositoryController
+    internal class GitRepositorioController
     {
-        private readonly IGitRepositoryService _gitService;
-        private readonly GeminiController _geminiController;
-        private readonly ILogger<RepositoryController> _logger;
+        private readonly IGitRepositorioService _gitService;
+        private readonly IAController _geminiController;
+        private readonly ILogger<GitRepositorioController> _logger;
 
-        public RepositoryController(
-            IGitRepositoryService gitService,
-            GeminiController geminiController,
-            ILogger<RepositoryController> logger)
+        public GitRepositorioController(
+            IGitRepositorioService gitService,
+            IAController geminiController,
+            ILogger<GitRepositorioController> logger)
         {
             _gitService = gitService;
             _geminiController = geminiController;

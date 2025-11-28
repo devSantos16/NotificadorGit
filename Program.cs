@@ -21,30 +21,29 @@ namespace NotificadorGit
                 .ConfigureServices((ctx, services) =>
                 {
                     services.AddLogging();
-                    services.Configure<GitOptions>(opcoes =>
+                    services.Configure<GitOpcoes>(opcoes =>
                     {
                         opcoes.CaminhoRepositorio = @"C:\dev\repoTeste";
                         opcoes.Branch = "main";
                         opcoes.Remota = "origin";
                     });
-                    services.Configure<GeminiOptions>(opts =>
+                    services.Configure<IAOpcoes>(opts =>
                     {
                         opts.ApiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty;
                         opts.Model = "gemini-2.0-flash";
                         opts.BaseUrl = "https://generativelanguage.googleapis.com";
                     });
 
-                    services.AddHttpClient<IGeminiService, GeminiService>();
-                    services.AddSingleton<IGitRepositoryService, GitRepositoryService>();
-                    services.AddTransient<RepositoryController>();
-                    services.AddTransient<GeminiController>();
+                    services.AddHttpClient<IIAService, GeminiService>();
+                    services.AddSingleton<IGitRepositorioService, GitRepositorioService>();
+
+                    services.AddTransient<GitRepositorioController>();
+                    services.AddTransient<IAController>();
                 })
                 .Build();
 
             using var scope = host.Services.CreateScope();
-            var controller = scope.ServiceProvider.GetRequiredService<Controller.RepositoryController>();
-            var geminiController = scope.ServiceProvider.GetRequiredService<Controller.GeminiController>();
-            
+            var controller = scope.ServiceProvider.GetRequiredService<Controller.GitRepositorioController>();
 
             try
             {
