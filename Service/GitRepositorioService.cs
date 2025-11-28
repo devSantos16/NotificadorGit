@@ -137,7 +137,7 @@ namespace NotificadorGit.Service
                 foreach (var modificacao in modificacoes)
                 {
                     if (!arquivosLocais.Contains(modificacao.Path)) continue;
-                    if (commits.Any(x => x.Conflitos.Any(c => string.Equals(c.NomeArquivo, modificacao.Path, StringComparison.OrdinalIgnoreCase)))) continue;
+                    if (commits.Any(x => x.Arquivos.Any(c => string.Equals(c.NomeArquivo, modificacao.Path, StringComparison.OrdinalIgnoreCase)))) continue;
 
                     var entry = patch[modificacao.Path];
                     var blob = commit[modificacao.Path]?.Target as Blob;
@@ -164,7 +164,7 @@ namespace NotificadorGit.Service
                         Email = commit.Author.Email,
                         Mensagem = commit.Message,
                         Data = commit.Author.When,
-                        Conflitos = arquivos
+                        Arquivos = arquivos
                     });
                 }
             }

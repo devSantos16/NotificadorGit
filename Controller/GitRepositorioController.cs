@@ -33,7 +33,7 @@ namespace NotificadorGit.Controller
             {
                 foreach (var commit in branch.Commits)
                 {
-                    foreach (var arquivo in commit.Conflitos)
+                    foreach (var arquivo in commit.Arquivos)
                     {
                         string pergunta =
                             "Responda em JSON no formato { \"message\": string, \"isTrue\": bool }. " +

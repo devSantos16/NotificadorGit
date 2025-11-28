@@ -15,6 +15,6 @@ namespace NotificadorGit.Model
         public string Autor { get; set; }
         public string Email { get; set; }
         public DateTimeOffset Data { get; set; }
-        public List<Arquivo> Conflitos { get; set; }
+        public List<Arquivo> Arquivos { get; set; }
     }
 }
