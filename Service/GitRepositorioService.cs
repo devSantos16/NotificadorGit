@@ -13,12 +13,12 @@ namespace NotificadorGit.Service
 {
     internal class GitRepositorioService : IGitRepositorioService
     {
-        private readonly GitOpcoes _options;
+        private readonly GitOpcoes _opcoes;
         private readonly ILogger<GitRepositorioService> _logger;
 
         public GitRepositorioService(IOptions<GitOpcoes> options, ILogger<GitRepositorioService> logger)
         {
-            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+            _opcoes = options?.Value ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -31,42 +31,42 @@ namespace NotificadorGit.Service
         {
             try
             {
-                _logger.LogInformation("Listando commits com conflito em {RepositoryPath} na branch {Branch} da remota {Remote}.", _options.CaminhoRepositorio, _options.Branch, _options.Remota);
+                _logger.LogInformation("Listando commits com conflito em {RepositoryPath} na branch {Branch} da remota {Remote}.", _opcoes.CaminhoRepositorio, _opcoes.Branch, _opcoes.Remota);
                 
-                using var repo = new Repository(_options.CaminhoRepositorio);
-                var remote = repo.Network.Remotes[_options.Remota];
+                using var repo = new Repository(_opcoes.CaminhoRepositorio);
+                var remota = repo.Network.Remotes[_opcoes.Remota];
 
                 // Faz o Fetch pra poder analisar o repositorio remoto
-                Commands.Fetch(repo, remote.Name, remote.FetchRefSpecs.Select(rs => rs.Specification), null, null );
+                Commands.Fetch(repo, remota.Name, remota.FetchRefSpecs.Select(rs => rs.Specification), null, null );
 
                 // Obtém todas as branches remotas
-                var remoteBranches = repo.Branches
-                    .Where(b => b.IsRemote && b.FriendlyName.StartsWith($"{_options.Remota}/"))
+                var branchesRemota = repo.Branches
+                    .Where(b => b.IsRemote && b.FriendlyName.StartsWith($"{_opcoes.Remota}/"))
                     .ToList();
 
                 // Obtém a branch principal remota
-                var mainBranch = repo.Branches[$"{_options.Remota}/{_options.Branch}"];
+                var branchPrincipal = repo.Branches[$"{_opcoes.Remota}/{_opcoes.Branch}"];
 
                 // Obtém as branches filhas da principal remota
-                var childBranches = remoteBranches
-                    .Where(b => b != mainBranch && repo.ObjectDatabase
-                    .CalculateHistoryDivergence(mainBranch.Tip, b.Tip)?.CommonAncestor == mainBranch.Tip)
+                var branchesFilhaRemota = branchesRemota
+                    .Where(b => b != branchPrincipal && repo.ObjectDatabase
+                    .CalculateHistoryDivergence(branchPrincipal.Tip, b.Tip)?.CommonAncestor == branchPrincipal.Tip)
                     .ToList();
 
                 // Obtem a branch local
-                var localBranch = repo.Branches[_options.Branch];
+                var branchLocal = repo.Branches[_opcoes.Branch];
 
                 // Cria uma lista com a branch principal e as filhas para processar
-                var branchesParaProcessar = new List<LibGit2Sharp.Branch>();
+                var branches = new List<LibGit2Sharp.Branch>();
                 
-                if (mainBranch != null)
+                if (branchPrincipal != null)
                 {
                     // Adiciona a branch principal à lista de processamento
-                    branchesParaProcessar.Add(mainBranch);
+                    branches.Add(branchPrincipal);
                 }
 
                 // Adiciona as branches filhas à lista de processamento
-                branchesParaProcessar.AddRange(childBranches);
+                branches.AddRange(branchesFilhaRemota);
 
                 // pega todos os arquivo locais do repositorio
                 var arquivosLocais = repo.RetrieveStatus()
@@ -74,15 +74,15 @@ namespace NotificadorGit.Service
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 // Cria uma lista de branches
-                var branches = new List<Model.Branch>();
+                var branchesParaProcessar = new List<Model.Branch>();
 
-                foreach (var remoteBranch in branchesParaProcessar)
+                foreach (var remoteBranch in branches)
                 {
                     Model.Branch branch = new Model.Branch();
 
-                    var exclude = remoteBranch == mainBranch
-                        ? new[] { localBranch }
-                        : new[] { localBranch, mainBranch };
+                    var exclude = remoteBranch == branchPrincipal
+                        ? new[] { branchLocal }
+                        : new[] { branchLocal, branchPrincipal };
 
                     ICommitLog commitsRemoto = repo.Commits.QueryBy(new CommitFilter
                     {
@@ -91,19 +91,19 @@ namespace NotificadorGit.Service
                     });
 
                     // instancia uma lista de commits
-                    var commits = obterCommits(repo, commitsRemoto, arquivosLocais, cancellationToken, localBranch);
+                    var commits = obterCommits(repo, commitsRemoto, arquivosLocais, cancellationToken, branchLocal);
 
                     if (commits.Any())
                     {
-                        branches.Add(new Model.Branch 
+                        branchesParaProcessar.Add(new Model.Branch 
                         { 
                             Commits = commits,
-                            NomeBranch = remoteBranch.FriendlyName.Replace($"{_options.Remota}/", string.Empty)
+                            NomeBranch = remoteBranch.FriendlyName.Replace($"{_opcoes.Remota}/", string.Empty)
                         });
                     }
                 }
 
-                return branches;
+                return branchesParaProcessar;
             }
             catch (OperationCanceledException)
             {
@@ -129,11 +129,11 @@ namespace NotificadorGit.Service
             foreach (var commit in commitsRemoto)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var parent = commit.Parents.FirstOrDefault();
-                if (parent == null) continue;
+                var parentes = commit.Parents.FirstOrDefault();
+                if (parentes == null) continue;
 
-                var modificacoes = repo.Diff.Compare<TreeChanges>(parent.Tree, commit.Tree);
-                var patch = repo.Diff.Compare<Patch>(parent.Tree, commit.Tree);
+                var modificacoes = repo.Diff.Compare<TreeChanges>(parentes.Tree, commit.Tree);
+                var patch = repo.Diff.Compare<Patch>(parentes.Tree, commit.Tree);
                 List<Arquivo> arquivos = new List<Arquivo>();
                 
                 foreach (var modificacao in modificacoes)
@@ -144,16 +144,16 @@ namespace NotificadorGit.Service
                     var entry = patch[modificacao.Path];
                     var blob = commit[modificacao.Path]?.Target as Blob;
                     var blobPartida = commitBranchLocal.FirstOrDefault()[modificacao.Path]?.Target as Blob;
-                    var localPartidaContent = blobPartida?.GetContentText();
-                    string remoteContent = blob?.GetContentText();
-                    string localContent = File.ReadAllText(Path.Combine(repo.Info.WorkingDirectory, modificacao.Path));
+                    string conteudoPartida = blobPartida?.GetContentText();
+                    string conteudoRemota = blob?.GetContentText();
+                    string conteudoLocal = File.ReadAllText(Path.Combine(repo.Info.WorkingDirectory, modificacao.Path));
 
                     arquivos.Add(new Arquivo
                     {
                         NomeArquivo = modificacao.Path,
-                        DiffPartida = localPartidaContent,
-                        DiffLocal = localContent,
-                        DiffRemoto = remoteContent,
+                        DiffPartida = conteudoPartida,
+                        DiffLocal = conteudoLocal,
+                        DiffRemoto = conteudoRemota,
                     });
                 }
 
