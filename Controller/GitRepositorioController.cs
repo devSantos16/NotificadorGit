@@ -27,22 +27,20 @@ namespace NotificadorGit.Controller
         public async Task<List<Branch>> ListarBranchesComConflito(
             CancellationToken cancellationToken = default)
         {
-            var branchesTask = _gitService.ListarBranchesComConflitoAsync(cancellationToken);
-
-            var branches = await branchesTask;
+            var branches = await _gitService.ListarBranchesComConflitoAsync(cancellationToken);
 
             foreach (var branch in branches)
             {
                 foreach (var commit in branch.Commits)
                 {
-                    foreach (var conflito in commit.Conflitos)
+                    foreach (var arquivo in commit.Conflitos)
                     {
                         string pergunta =
                             "Responda em JSON no formato { \"message\": string, \"isTrue\": bool }. " +
                             "Avalie se há conflito entre os diffs abaixo.\n\n" +
 
                             "[DIFF DE PARTIDA]\n" +
-                            $"{conflito.DiffPartida}\n\n" +
+                            $"{arquivo.DiffPartida}\n\n" +
 
                             "Informações do commit remoto:\n" +
                             $"- Autor: {commit.Autor}\n" +
@@ -51,10 +49,10 @@ namespace NotificadorGit.Controller
                             $"- Mensagem: {commit.Mensagem}\n" +
                             
                             "[DIFF REMOTO]\n" +
-                            $"{conflito.DiffRemoto}\n\n" +
+                            $"{arquivo.DiffRemoto}\n\n" +
 
                             "[DIFF LOCAL]\n" +
-                            $"{conflito.DiffLocal}\n\n" +
+                            $"{arquivo.DiffLocal}\n\n" +
 
                             "Pergunta: O diff remoto conflita com o diff local em relação ao diff de partida?\n" +
                             "Se 'isTrue' for true, explique detalhadamente em 'message' quais partes conflitam, " +
@@ -63,7 +61,7 @@ namespace NotificadorGit.Controller
                         (bool, string) resposta =
                             await _geminiController.GerarPromptAsync(pergunta, cancellationToken);
 
-                        conflito.HaConflitoComJustificativa = resposta;
+                        arquivo.HaConflitoComJustificativa = resposta;
                     }
                 }
             }
