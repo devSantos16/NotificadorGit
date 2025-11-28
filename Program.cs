@@ -18,40 +18,40 @@ namespace NotificadorGit
         static async Task Main(string[] args)
         {
             var host = Host.CreateDefaultBuilder(args)
-                .ConfigureServices((ctx, services) =>
+                .ConfigureServices((ctx, servicos) =>
                 {
-                    services.AddLogging();
-                    services.Configure<GitOpcoes>(opcoes =>
+                    servicos.AddLogging();
+                    servicos.Configure<GitOpcoes>(opcoes =>
                     {
                         opcoes.CaminhoRepositorio = @"C:\dev\repoTeste";
                         opcoes.Branch = "main";
                         opcoes.Remota = "origin";
                     });
-                    services.Configure<IAOpcoes>(opts =>
+                    servicos.Configure<IAOpcoes>(opts =>
                     {
                         opts.ApiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty;
                         opts.Model = "gemini-2.0-flash";
                         opts.BaseUrl = "https://generativelanguage.googleapis.com";
                     });
 
-                    services.AddHttpClient<IIAService, GeminiService>();
-                    services.AddSingleton<IGitRepositorioService, GitRepositorioService>();
+                    servicos.AddHttpClient<IIAService, GeminiService>();
+                    servicos.AddSingleton<IGitRepositorioService, GitRepositorioService>();
 
-                    services.AddTransient<GitRepositorioController>();
-                    services.AddTransient<IAController>();
+                    servicos.AddTransient<GitRepositorioController>();
+                    servicos.AddTransient<IAController>();
                 })
                 .Build();
 
-            using var scope = host.Services.CreateScope();
-            var controller = scope.ServiceProvider.GetRequiredService<Controller.GitRepositorioController>();
+            using var escopo = host.Services.CreateScope();
+            var controller = escopo.ServiceProvider.GetRequiredService<Controller.GitRepositorioController>();
 
             try
             {
-                var commits = await controller.ListarBranchesComConflito();
+                var branches = await controller.ListarBranchesComConflito();
             }
             catch (Exception ex)
             {
-                var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+                var logger = escopo.ServiceProvider.GetRequiredService<ILogger<Program>>();
                 logger.LogError(ex, "Erro na execução");
             }
         }
