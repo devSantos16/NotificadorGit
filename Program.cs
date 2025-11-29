@@ -29,9 +29,9 @@ namespace NotificadorGit
                     });
                     servicos.Configure<IAOpcoes>(opts =>
                     {
-                        opts.ApiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty;
-                        opts.Model = "gemini-2.0-flash";
-                        opts.BaseUrl = "https://generativelanguage.googleapis.com";
+                        opts.ChaveApi = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty;
+                        opts.Modelo = "gemini-2.0-flash";
+                        opts.Url = "https://generativelanguage.googleapis.com";
                     });
 
                     servicos.AddHttpClient<IIAService, GeminiService>();

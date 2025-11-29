@@ -31,7 +31,7 @@ namespace NotificadorGit.Service
 
             var requestBody = new
             {
-                model = _options.Model,
+                model = _options.Modelo,
                 contents = new[]
                 {
                     new { parts = new[] { new { text = prompt } } }
@@ -39,15 +39,15 @@ namespace NotificadorGit.Service
             };
 
             var json = JsonSerializer.Serialize(requestBody);
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{_options.BaseUrl}/v1beta/models/{_options.Model}:generateContent")
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{_options.Url}/v1beta/models/{_options.Modelo}:generateContent")
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
 
-            if (!string.IsNullOrEmpty(_options.ApiKey))
+            if (!string.IsNullOrEmpty(_options.ChaveApi))
             {
                 if (!request.Headers.Contains("X-goog-api-key"))
-                    request.Headers.Add("X-goog-api-key", _options.ApiKey);
+                    request.Headers.Add("X-goog-api-key", _options.ChaveApi);
             }
 
             var response = await _httpClient.SendAsync(request, cancellationToken);

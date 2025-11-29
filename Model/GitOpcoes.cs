@@ -8,7 +8,7 @@ namespace NotificadorGit.Model
 {
     internal class GitOpcoes
     {
-        public string CaminhoRepositorio { get; set; } = string.Empty;
+        public string CaminhoRepositorio { get; set; }
         public string Branch { get; set; }
         public string Remota { get; set; }
     }
