@@ -1,4 +1,4 @@
-﻿using LibGit2Sharp;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -6,10 +6,6 @@ using NotificadorGit.Controller;
 using NotificadorGit.Interface;
 using NotificadorGit.Model;
 using NotificadorGit.Service;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using Microsoft.Extensions.Http;
 
 namespace NotificadorGit
 {
@@ -18,21 +14,15 @@ namespace NotificadorGit
         static async Task Main(string[] args)
         {
             var host = Host.CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration((hostingContext, config) =>
+                {
+                    config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                })
                 .ConfigureServices((ctx, servicos) =>
                 {
                     servicos.AddLogging();
-                    servicos.Configure<GitOpcoes>(opcoes =>
-                    {
-                        opcoes.CaminhoRepositorio = @"C:\dev\repoTeste";
-                        opcoes.Branch = "main";
-                        opcoes.Remota = "origin";
-                    });
-                    servicos.Configure<IAOpcoes>(opts =>
-                    {
-                        opts.ChaveApi = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty;
-                        opts.Modelo = "gemini-2.0-flash";
-                        opts.Url = "https://generativelanguage.googleapis.com";
-                    });
+                    servicos.Configure<GitOpcoes>(ctx.Configuration.GetSection("GitOpcoes"));
+                    servicos.Configure<IAOpcoes>(ctx.Configuration.GetSection("IAOpcoes"));
 
                     servicos.AddHttpClient<IIAService, GeminiService>();
                     servicos.AddSingleton<IGitRepositorioService, GitRepositorioService>();
