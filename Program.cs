@@ -20,7 +20,12 @@ namespace NotificadorGit
                 })
                 .ConfigureServices((ctx, servicos) =>
                 {
-                    servicos.AddLogging();
+                    servicos.AddLogging(builder =>
+                    {
+                        builder.AddConsole();
+                        builder.SetMinimumLevel(LogLevel.Debug);
+                    });
+
                     servicos.Configure<GitOpcoes>(ctx.Configuration.GetSection("GitOpcoes"));
                     servicos.Configure<IAOpcoes>(ctx.Configuration.GetSection("IAOpcoes"));
 
